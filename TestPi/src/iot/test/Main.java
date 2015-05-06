@@ -18,6 +18,8 @@ import iot.test.BMP085.BMP085Device;
 import iot.test.BMP085.BMP085Mode;
 import iot.test.BMP085.BMP085Result;
 import iot.test.grovepi.GrovePiDio;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
@@ -133,13 +135,14 @@ public class Main {
       bmp085Device.initialize();
       Client client = ClientBuilder.newClient();
       WebTarget target = client.target("http://192.168.1.100:8080/TestIoTServer/rest/temperature");
+      ExecutorService executor = Executors.newSingleThreadExecutor();
       for (int i = 0; i < 30; i++) {
         BMP085Result temperaturePressure = bmp085Device.getTemperaturePressure(BMP085Mode.STANDARD);
         System.out.println(temperaturePressure);
 
-        target.request().post(Entity.text("TEMP:" + temperaturePressure.getTemperatureCelsius()));
+        executor.execute(() -> target.request().post(Entity.text("TEMP:" + temperaturePressure.getTemperatureCelsius())));
 
-        if (temperaturePressure.getTemperatureCelsius() > 31) {
+        if (temperaturePressure.getTemperatureCelsius() > 30) {
           grovePi.setDigital(buzzer, true);
           grovePi.setDigital(led, true);
         } else {
@@ -148,6 +151,7 @@ public class Main {
         }
         Thread.sleep(500);
       }
+      executor.shutdown();
       grovePi.setDigital(buzzer, false);
       grovePi.setDigital(led, false);
     }
