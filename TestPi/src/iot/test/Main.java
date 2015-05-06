@@ -18,6 +18,10 @@ import iot.test.BMP085.BMP085Device;
 import iot.test.BMP085.BMP085Mode;
 import iot.test.BMP085.BMP085Result;
 import iot.test.grovepi.GrovePiDio;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.WebTarget;
 
 public class Main {
 
@@ -28,7 +32,8 @@ public class Main {
     //testI2C();
     //testLedDio();
     //testLedPi4J();
-    testTemperatureBuzzer();
+    //testTemperatureBuzzer();
+    testTemperatureRESTClient();
   }
 
   private static void testLedPi4J() throws InterruptedException {
@@ -103,7 +108,7 @@ public class Main {
       for (int i = 0; i < 30; i++) {
         BMP085Result temperaturePressure = bmp085Device.getTemperaturePressure(BMP085Mode.STANDARD);
         System.out.println(temperaturePressure);
-        if (temperaturePressure.getTemperatureCelsius() > 27) {
+        if (temperaturePressure.getTemperatureCelsius() > 31) {
           grovePi.setDigital(buzzer, true);
           grovePi.setDigital(led, true);
         } else {
@@ -116,4 +121,36 @@ public class Main {
       grovePi.setDigital(led, false);
     }
   }
+
+  private static void testTemperatureRESTClient() throws Exception {
+    try (GrovePi grovePi = new GrovePi(new GrovePiDio());
+            BMP085Device bmp085Device = new BMP085Device()) {
+      Thread.sleep(1000);
+      final byte led = (byte) 3;
+      final byte buzzer = (byte) 4;
+      grovePi.setPinModeOutput(led);
+      grovePi.setPinModeOutput(buzzer);
+      bmp085Device.initialize();
+      Client client = ClientBuilder.newClient();
+      WebTarget target = client.target("http://192.168.1.100:8080/TestIoTServer/rest/temperature");
+      for (int i = 0; i < 30; i++) {
+        BMP085Result temperaturePressure = bmp085Device.getTemperaturePressure(BMP085Mode.STANDARD);
+        System.out.println(temperaturePressure);
+
+        target.request().post(Entity.text("TEMP:" + temperaturePressure.getTemperatureCelsius()));
+
+        if (temperaturePressure.getTemperatureCelsius() > 31) {
+          grovePi.setDigital(buzzer, true);
+          grovePi.setDigital(led, true);
+        } else {
+          grovePi.setDigital(buzzer, false);
+          grovePi.setDigital(led, false);
+        }
+        Thread.sleep(500);
+      }
+      grovePi.setDigital(buzzer, false);
+      grovePi.setDigital(led, false);
+    }
+  }
+
 }
