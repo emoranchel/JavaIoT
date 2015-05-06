@@ -1,0 +1,1 @@
+mvn install:install-file -Dfile=dio.jar -Dsources=dio-src.jar -Djavadoc=dio-javadoc.jar -DgroupId=jdk.dio -DartifactId=dio -Dversion=1.0 -Dpackaging=jar
